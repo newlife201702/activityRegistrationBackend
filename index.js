@@ -2,6 +2,7 @@ const express = require('express');
 const mysql = require('mysql2/promise');
 const cors = require('cors');
 const config = require('./env');
+const axios = require('axios');
 
 // 创建Express应用
 const app = express();
@@ -35,9 +36,30 @@ async function testDbConnection() {
   }
 }
 
+// 微信配置
+const wxConfig = {
+  appId: 'wxc3a0ba6d05fa17c0',
+  appSecret: '62dd1f85508830b5f496671e0976912f'
+};
+
 // 基础路由
 app.get('/', (req, res) => {
   res.json({ message: '活动报名系统API服务运行中' });
+});
+
+// 获取 openid
+app.post('/getOpenid', async (req, res) => {
+  const { code } = req.body;
+  const url = `https://api.weixin.qq.com/sns/jscode2session?appid=${wxConfig.appId}&secret=${wxConfig.appSecret}&js_code=${code}&grant_type=authorization_code`;
+
+  try {
+    const response = await axios.get(url);
+    console.log('getOpenid_response.data', response.data);
+    const { openid, session_key } = response.data;
+    res.json({ openid, session_key });
+  } catch (err) {
+    res.status(500).json({ error: '获取 openid 失败' });
+  }
 });
 
 // 启动服务器
