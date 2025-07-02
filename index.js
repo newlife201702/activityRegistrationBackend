@@ -95,6 +95,24 @@ app.get('/batches', async (req, res) => {
   }
 });
 
+// 获取特定批次信息
+app.get('/batch/:batchId', async (req, res) => {
+  const { batchId } = req.params;
+  
+  try {
+    const [rows] = await pool.query('SELECT * FROM batch WHERE id = ?', [batchId]);
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ error: '未找到该批次' });
+    }
+    
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('获取批次信息失败:', err);
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 // 启动服务器
 app.listen(PORT, async () => {
   await testDbConnection();
