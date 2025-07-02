@@ -113,6 +113,43 @@ app.get('/batch/:batchId', async (req, res) => {
   }
 });
 
+// 提交报名信息
+app.post('/registration/submit', async (req, res) => {
+  const { 
+    batchId, 
+    name, 
+    gender, 
+    contact, 
+    idNumber, 
+    helper, 
+    selectedDates, 
+    fee,
+    openid 
+  } = req.body;
+  
+  // 验证必要参数
+  if (!batchId || !name || !gender || !contact || !idNumber || !helper || !selectedDates || !fee || !openid) {
+    return res.status(400).json({ error: '缺少必要参数' });
+  }
+
+  try {
+    // 插入数据到user表
+    const [result] = await pool.query(
+      'INSERT INTO user (batch_id, name, gender, contact, id_card_number, copy_helper, participation_date, registration_fee, openid, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [batchId, name, gender, contact, idNumber, helper, selectedDates, fee, openid, 'user']
+    );
+    
+    res.status(201).json({ 
+      success: true, 
+      message: '报名成功', 
+      userId: result.insertId 
+    });
+  } catch (err) {
+    console.error('报名提交失败:', err);
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 // 启动服务器
 app.listen(PORT, async () => {
   await testDbConnection();
