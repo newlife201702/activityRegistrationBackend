@@ -84,6 +84,17 @@ app.get('/getUserInfo', async (req, res) => {
   }
 });
 
+// 获取所有批次信息
+app.get('/batches', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM batch');
+    res.json(rows);
+  } catch (err) {
+    console.error('获取批次信息失败:', err);
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 // 启动服务器
 app.listen(PORT, async () => {
   await testDbConnection();
