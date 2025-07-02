@@ -62,6 +62,28 @@ app.post('/getOpenid', async (req, res) => {
   }
 });
 
+// 获取用户信息
+app.get('/getUserInfo', async (req, res) => {
+  const { openid } = req.query;
+  
+  if (!openid) {
+    return res.status(400).json({ error: '缺少openid参数' });
+  }
+
+  try {
+    const [rows] = await pool.query('SELECT * FROM user WHERE openid = ?', [openid]);
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ error: '未找到该用户' });
+    }
+    
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('获取用户信息失败:', err);
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 // 启动服务器
 app.listen(PORT, async () => {
   await testDbConnection();
