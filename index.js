@@ -258,11 +258,29 @@ app.post('/api/payment/notify', express.raw({ type: 'text/xml' }), async (req, r
       
       console.log(`支付成功: 订单号=${orderId}, 金额=${totalFee}分, 微信交易号=${transactionId}`);
       
-      // 更新数据库中的支付状态
+      // 更新payment表中的支付状态
       await pool.query(
         'UPDATE payment SET status = ?, transaction_id = ?, pay_time = NOW() WHERE order_id = ?',
         ['paid', transactionId, orderId]
       );
+      
+      // 获取payment表中对应订单的openid
+      const [paymentRows] = await pool.query(
+        'SELECT openid FROM payment WHERE order_id = ?',
+        [orderId]
+      );
+      
+      if (paymentRows.length > 0) {
+        const { openid } = paymentRows[0];
+        
+        // 更新user表中对应用户的支付状态
+        await pool.query(
+          'UPDATE user SET pay_status = ? WHERE openid = ?',
+          ['paid', openid]
+        );
+        
+        console.log(`已更新用户(openid=${openid})的支付状态为已支付`);
+      }
       
       // 返回成功通知
       res.type('xml');
