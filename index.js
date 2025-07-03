@@ -211,6 +211,17 @@ app.post('/registration/pay', async (req, res) => {
   }
 });
 
+// 获取报名列表
+app.get('/registration/list', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM user WHERE role != ?', ['admin']);
+    res.json(rows);
+  } catch (err) {
+    console.error('获取报名列表失败:', err);
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 // 微信支付结果通知回调
 app.post('/api/payment/notify', express.raw({ type: 'text/xml' }), async (req, res) => {
   console.log('收到微信支付通知');
