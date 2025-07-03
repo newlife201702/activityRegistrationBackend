@@ -165,9 +165,9 @@ app.post('/registration/pay', async (req, res) => {
     const wxpayConfig = {
       appid: wxConfig.appId,
       mchid: '1721148054',
-      partnerKey: '7fG9jKp2QwE5zX8LbR3yV6nD1cH4sM0tU', // 微信支付安全密钥
+      partnerKey: '7fG9jKp2QwE5zX8LbR3yV6nD1cH4sM0t', // 微信支付安全密钥
       // pfx: null, // 如需使用退款等接口，请设置证书路径
-      // notify_url: 'https://your-domain.com/api/payment/notify',
+      notify_url: 'https://mp.weixin.qq.com',
       // spbill_create_ip: '47.117.173.54'
     };
     
