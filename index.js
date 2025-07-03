@@ -167,7 +167,7 @@ app.post('/registration/pay', async (req, res) => {
       mchid: '1721148054',
       partnerKey: '7fG9jKp2QwE5zX8LbR3yV6nD1cH4sM0t', // 微信支付安全密钥
       // pfx: null, // 如需使用退款等接口，请设置证书路径
-      notify_url: 'https://mp.weixin.qq.com',
+      notify_url: 'https://activityregistration.weimeigu.com.cn/api/payment/notify',
       // spbill_create_ip: '47.117.173.54'
     };
     
@@ -208,6 +208,52 @@ app.post('/registration/pay', async (req, res) => {
   } catch (err) {
     console.error('生成支付参数失败:', err);
     res.status(500).json({ error: '服务器错误', message: err.message });
+  }
+});
+
+// 微信支付结果通知回调
+app.post('/api/payment/notify', async (req, res) => {
+  console.log('收到微信支付通知');
+  
+  try {
+    // 微信支付配置
+    const wxpayConfig = {
+      appid: wxConfig.appId,
+      mchid: '1721148054',
+      partnerKey: '7fG9jKp2QwE5zX8LbR3yV6nD1cH4sM0t', // 微信支付安全密钥
+    };
+    
+    // 创建微信支付实例
+    const api = new tenpay(wxpayConfig);
+    
+    // 解析微信支付通知
+    const result = await api.notifyParse(req.body);
+    console.log('支付结果通知:', result);
+    
+    // 验证支付结果
+    if (result.return_code === 'SUCCESS' && result.result_code === 'SUCCESS') {
+      // 获取订单号和支付金额
+      const orderId = result.out_trade_no;
+      const totalFee = result.total_fee;
+      const transactionId = result.transaction_id;
+      
+      console.log(`支付成功: 订单号=${orderId}, 金额=${totalFee}分, 微信交易号=${transactionId}`);
+      
+      // 更新数据库中的支付状态
+      await pool.query(
+        'UPDATE payment SET status = ?, transaction_id = ?, pay_time = NOW() WHERE order_id = ?',
+        ['paid', transactionId, orderId]
+      );
+      
+      // 返回成功通知
+      res.send(api.notifyReply());
+    } else {
+      console.error('支付失败:', result.return_msg || result.err_code_des);
+      res.send(api.notifyReply('FAIL', '支付结果验证失败'));
+    }
+  } catch (err) {
+    console.error('处理支付通知失败:', err);
+    res.status(500).send('处理支付通知失败');
   }
 });
 
