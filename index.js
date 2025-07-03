@@ -3,6 +3,7 @@ const mysql = require('mysql2/promise');
 const cors = require('cors');
 const config = require('./env');
 const axios = require('axios');
+const tenpay = require('tenpay');
 
 // 创建Express应用
 const app = express();
@@ -147,6 +148,66 @@ app.post('/registration/submit', async (req, res) => {
   } catch (err) {
     console.error('报名提交失败:', err);
     res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// 生成微信支付参数
+app.post('/registration/pay', async (req, res) => {
+  const { batchId, fee, openid } = req.body;
+  
+  // 验证必要参数
+  if (!batchId || !fee || !openid) {
+    return res.status(400).json({ error: '缺少必要参数' });
+  }
+
+  try {
+    // 微信支付配置
+    const wxpayConfig = {
+      appid: wxConfig.appId,
+      mchid: '1721148054',
+      partnerKey: '7fG9jKp2QwE5zX8LbR3yV6nD1cH4sM0tU', // 微信支付安全密钥
+      // pfx: null, // 如需使用退款等接口，请设置证书路径
+      // notify_url: 'https://your-domain.com/api/payment/notify',
+      // spbill_create_ip: '47.117.173.54'
+    };
+    
+    // 创建微信支付实例
+    const api = new tenpay(wxpayConfig);
+    
+    // 生成订单号
+    const orderId = 'ORDER' + Date.now().toString() + Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    
+    // 转换金额为分
+    const totalFee = Math.floor(parseFloat(fee) * 100);
+    
+    // 直接调用getPayParams方法，自动完成下单并获取支付参数
+    const payParams = await api.getPayParams({
+      out_trade_no: orderId,
+      body: '活动报名费用',
+      total_fee: totalFee,
+      openid: openid
+    });
+    
+    console.log('生成的支付参数:', payParams);
+    
+    // 记录支付信息到数据库
+    await pool.query(
+      'INSERT INTO payment (order_id, batch_id, openid, fee, status, create_time) VALUES (?, ?, ?, ?, ?, NOW())',
+      [orderId, batchId, openid, fee, 'pending']
+    );
+    
+    // 返回小程序调用支付API需要的参数
+    res.json({
+      timeStamp: payParams.timeStamp,
+      nonceStr: payParams.nonceStr,
+      package: payParams.package,
+      signType: payParams.signType,
+      paySign: payParams.paySign,
+      orderId
+    });
+  } catch (err) {
+    console.error('生成支付参数失败:', err);
+    res.status(500).json({ error: '服务器错误', message: err.message });
   }
 });
 
