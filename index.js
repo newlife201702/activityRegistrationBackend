@@ -212,7 +212,7 @@ app.post('/registration/pay', async (req, res) => {
 });
 
 // 微信支付结果通知回调
-app.post('/api/payment/notify', async (req, res) => {
+app.post('/api/payment/notify', express.raw({ type: 'text/xml' }), async (req, res) => {
   console.log('收到微信支付通知');
   
   try {
@@ -226,8 +226,16 @@ app.post('/api/payment/notify', async (req, res) => {
     // 创建微信支付实例
     const api = new tenpay(wxpayConfig);
     
-    // 解析微信支付通知
-    const result = await api.notifyParse(req.body);
+    // 获取原始XML数据
+    const xmlData = req.body.toString('utf8');
+    console.log('收到的XML数据:', xmlData);
+    
+    // 使用xml2js解析XML数据
+    const xml2js = require('xml2js');
+    const parser = new xml2js.Parser({ explicitArray: false });
+    const parsedXml = await parser.parseStringPromise(xmlData);
+    const result = parsedXml.xml;
+    
     console.log('支付结果通知:', result);
     
     // 验证支付结果
@@ -246,10 +254,12 @@ app.post('/api/payment/notify', async (req, res) => {
       );
       
       // 返回成功通知
-      res.send(api.notifyReply());
+      res.type('xml');
+      res.send('<xml><return_code><![CDATA[SUCCESS]]></return_code><return_msg><![CDATA[OK]]></return_msg></xml>');
     } else {
       console.error('支付失败:', result.return_msg || result.err_code_des);
-      res.send(api.notifyReply('FAIL', '支付结果验证失败'));
+      res.type('xml');
+      res.send('<xml><return_code><![CDATA[FAIL]]></return_code><return_msg><![CDATA[支付结果验证失败]]></return_msg></xml>');
     }
   } catch (err) {
     console.error('处理支付通知失败:', err);
