@@ -125,7 +125,8 @@ app.post('/registration/submit', async (req, res) => {
     helper, 
     selectedDates, 
     fee,
-    openid 
+    openid,
+    licensePlate  // 新增车牌号参数
   } = req.body;
   
   // 验证必要参数
@@ -136,8 +137,8 @@ app.post('/registration/submit', async (req, res) => {
   try {
     // 插入数据到user表
     const [result] = await pool.query(
-      'INSERT INTO user (batch_id, name, gender, contact, id_card_number, copy_helper, participation_date, registration_fee, openid, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [batchId, name, gender, contact, idNumber, helper, selectedDates, fee, openid, 'user']
+      'INSERT INTO user (batch_id, name, gender, contact, id_card_number, copy_helper, participation_date, registration_fee, openid, role, license_plate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [batchId, name, gender, contact, idNumber, helper, selectedDates, fee, openid, 'user', licensePlate]
     );
     
     res.status(201).json({ 
