@@ -135,7 +135,39 @@ app.post('/registration/submit', async (req, res) => {
   }
 
   try {
-    // 插入数据到user表
+    // 将selectedDates字符串按逗号分隔成数组
+    const datesArray = selectedDates.split(',');
+    
+    // 检查每个场次的报名人数
+    const fullDates = [];
+    for (const date of datesArray) {
+      // 查询每个场次的报名人数
+      const [countResult] = await pool.query(
+        `SELECT COUNT(*) as count FROM user 
+         WHERE role = 'user' AND 
+         FIND_IN_SET(?, participation_date) > 0`,
+        [date]
+      );
+      
+      const count = countResult[0].count;
+      console.log(`场次 ${date} 当前报名人数: ${count}`);
+      
+      // 如果人数达到或超过35人，则该场次已满
+      if (count >= 35) {
+        fullDates.push(date);
+      }
+    }
+    
+    // 如果有场次人数已满，则返回错误信息
+    if (fullDates.length > 0) {
+      return res.status(400).json({
+        error: '部分场次人数已满',
+        message: `以下场次人数已达到上限，请取消选择: ${fullDates.join(', ')}`,
+        fullDates: fullDates
+      });
+    }
+    
+    // 所有场次都未满，插入数据到user表
     const [result] = await pool.query(
       'INSERT INTO user (batch_id, name, gender, contact, id_card_number, copy_helper, participation_date, registration_fee, openid, role, license_plate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [batchId, name, gender, contact, idNumber, helper, selectedDates, fee, openid, 'user', licensePlate]
